@@ -4,7 +4,7 @@
 struct Hardware {
     memory: Vec<u16>,
 
-    pc_register: u16,
+    program_counter: u16,
     stack_pointer: u8,
 
     register_0: u16,
@@ -29,7 +29,7 @@ impl Hardware {
 
         let instance = Hardware {
             memory: vec![0; memory_size as usize],
-            pc_register: 0,
+            program_counter: 0,
             stack_pointer: 0,
             register_0: 0,
             register_1: 0,
@@ -66,6 +66,49 @@ impl Hardware {
         }
 
         return Ok(());
+    }
+
+    /// Executes a clock of CPU.
+    /// Returns error only if something really goes wrong
+    /// (hardware state is corrupted).
+    pub fn clock(&mut self) -> Result<(), &'static str>{
+
+        // Converting type for easier usage.
+        let program_counter = self.program_counter as usize;
+
+        if program_counter >= self.memory.len() {
+            return Err("PC goes beyond the memory!");
+        }
+
+        let instruction = self.memory[program_counter];
+
+        if instruction & 0b1111111111000000u16 == 0b0000000000000000u16 {
+            self.execute_no_operand_instruct(instruction);
+        }
+        else if instruction & 0b1111000000000000u16 == 0b0000000000000000u16 {
+            self.execute_single_operand_instruct(instruction);
+        }
+        else {
+            self.execute_double_operand_instruct(instruction);
+        }
+
+        return Ok(());
+    }
+
+    fn execute_no_operand_instruct(&mut self, instruction: u16) {
+
+        // NOP
+        if instruction == 0b0000000000000000u16 {
+            self.program_counter += 1;
+        }
+    }
+
+    fn execute_single_operand_instruct(&mut self, instruction: u16) {
+
+    }
+
+    fn execute_double_operand_instruct(&mut self, instruction: u16) {
+
     }
 }
 
@@ -120,5 +163,56 @@ mod tests {
         let data = vec![1, 2, 3, 4, 5];
         let load_result = hardware.load(&data, 1022);
         assert_eq!(load_result.is_err(), true);
+    }
+
+    #[test]
+    fn bad_program_counter() {
+        let mut hardware = Hardware::new(2000).unwrap();
+
+        // Equal to size of memory.
+        hardware.program_counter = 2000;
+        let clock_result = hardware.clock();
+        assert_eq!(clock_result.is_err(), true);
+
+        // Bigger than memory size.
+        hardware.program_counter = 2255;
+        let clock_result = hardware.clock();
+        assert_eq!(clock_result.is_err(), true);
+    }
+
+    #[test]
+    fn instruction_nop() {
+        let mut hardware = Hardware::new(3).unwrap();
+
+        let code = vec![0b0000000000000000u16, 0b0000000000000000u16];
+        hardware.load(&code, 0).unwrap();
+
+        assert_eq!(hardware.program_counter, 0);
+
+        hardware.clock().unwrap();
+
+        assert_eq!(hardware.program_counter, 1);
+        // Nothing else should be changed.
+        assert_eq!(hardware.register_0, 0);
+        assert_eq!(hardware.register_1, 0);
+        assert_eq!(hardware.register_2, 0);
+        assert_eq!(hardware.register_3, 0);
+        assert_eq!(hardware.register_4, 0);
+        assert_eq!(hardware.register_5, 0);
+        assert_eq!(hardware.register_6, 0);
+        assert_eq!(hardware.register_7, 0);
+
+        hardware.clock().unwrap();
+
+        assert_eq!(hardware.program_counter, 2);
+        // Nothing else should be changed.
+        assert_eq!(hardware.register_0, 0);
+        assert_eq!(hardware.register_1, 0);
+        assert_eq!(hardware.register_2, 0);
+        assert_eq!(hardware.register_3, 0);
+        assert_eq!(hardware.register_4, 0);
+        assert_eq!(hardware.register_5, 0);
+        assert_eq!(hardware.register_6, 0);
+        assert_eq!(hardware.register_7, 0);
     }
 }
