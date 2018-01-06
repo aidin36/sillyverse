@@ -1,0 +1,9 @@
+# Backup files
+*~
+
+# Build directories
+**/target/
+
+# IDE files
+.idea
+*.iml
