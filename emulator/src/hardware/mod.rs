@@ -174,4 +174,44 @@ mod tests {
         // Nothing else should be changed.
         assert_eq!(hardware.registers, [0; 8]);
     }
+
+    #[test]
+    fn instruction_jump() {
+        // Testing all four types of addresses.
+
+        let mut hardware = Hardware::new(11);
+
+        let code = vec![0b0000_000001_000010u16, // register 2 is address (2)
+                        0b0000000000000000u16,
+                        0b0000_000001_010001u16, // register 1 points to address (7 in memory: 6)
+                        0b0000000000000000u16,
+                        0b0000000000000000u16,
+                        0b0000000000000000u16,
+                        0b0000_000001_100011u16, // register 3 (2) + PC (6) = 8 is address
+                        0b0000000000000000u16,
+                        0b0000_000001_110100u16, // Register 4 (2) + PC (8) = 10 points to address
+                        0b0000000000000110u16, // 6
+                        0b0000000000000001u16, // 1
+                        ];
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[2] = 2;
+        hardware.registers[1] = 9;
+        hardware.registers[3] = 2;
+        hardware.registers[4] = 2;
+
+        assert_eq!(hardware.program_counter, 0);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 2);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 6);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 8);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 1);
+    }
 }

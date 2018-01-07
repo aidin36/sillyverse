@@ -14,7 +14,11 @@ impl Operations {
         let mut map: HashMap<OperationCode, fn(&mut Hardware, u16) -> Result<(), String>> =
             HashMap::new();
 
-        map.insert(OperationCode::new(0b0000000000000000u16), nop);
+        // No operand operations
+        map.insert(OperationCode::new(0b0000000000_000000u16), nop);
+
+        // Single operand operations
+        map.insert(OperationCode::new(0b0000_000001_000000u16), jump);
 
         Operations {
             functions: map,
@@ -30,7 +34,7 @@ impl Operations {
 }
 
 /// Gets operand, from the specified address.
-fn get_operand(hardware: &mut Hardware, address: u8) -> Result<u16, String> {
+fn get_operand(hardware: &Hardware, address: u8) -> Result<u16, String> {
 
     // Out addresses is 6 bit, so the first two bits are ignored.
     // Second two bits shows address type, and the rest (4 bits)
@@ -94,11 +98,27 @@ fn get_operand(hardware: &mut Hardware, address: u8) -> Result<u16, String> {
         address));
 }
 
+/// Extracts address from a one-operand instruction.
+fn extract_one_operand_address(instruction: u16) -> u8 {
+    return (instruction & 0b0000_000000_111111u16) as u8;
+}
+
+/// It just increases program counter (skips this instruction).
 fn nop(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
     hardware.program_counter += 1;
     return Ok(());
 }
 
+/// Jumps to the address inside the instruction.
+fn jump(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+    let address = extract_one_operand_address(instruction);
+
+    let operand = get_operand(hardware, address)?;
+
+    hardware.program_counter = operand;
+
+    return Ok(());
+}
 
 #[cfg(test)]
 mod tests {
