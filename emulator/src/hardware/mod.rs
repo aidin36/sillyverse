@@ -181,10 +181,10 @@ mod tests {
 
         let mut hardware = Hardware::new(11);
 
-        let code = vec![0b0000_000001_000010u16, // register 2 is address (2)
+        let code = vec![0b0000_000001_000010u16, // register 2 is address 3
                         0b0000000000000000u16,
-                        0b0000_000001_010001u16, // register 1 points to address (7 in memory: 6)
                         0b0000000000000000u16,
+                        0b0000_000001_010001u16, // register 1 points to address 7 in memory: 6
                         0b0000000000000000u16,
                         0b0000000000000000u16,
                         0b0000_000001_100011u16, // register 3 (2) + PC (6) = 8 is address
@@ -195,7 +195,7 @@ mod tests {
                         ];
         hardware.load(&code, 0).unwrap();
 
-        hardware.registers[2] = 2;
+        hardware.registers[2] = 3;
         hardware.registers[1] = 9;
         hardware.registers[3] = 2;
         hardware.registers[4] = 2;
@@ -203,7 +203,7 @@ mod tests {
         assert_eq!(hardware.program_counter, 0);
 
         hardware.clock().unwrap();
-        assert_eq!(hardware.program_counter, 2);
+        assert_eq!(hardware.program_counter, 3);
 
         hardware.clock().unwrap();
         assert_eq!(hardware.program_counter, 6);
