@@ -89,6 +89,7 @@ impl Hardware {
 mod tests {
 
     use super::*;
+    use std::u16;
 
     #[test]
     fn load() {
@@ -226,7 +227,7 @@ mod tests {
                         0b0001_110000_000001u16, // Register 0 + PC (3) -> Memory 15 => Register 1
                         0b0001_010101_110110u16, // Register 5 -> Memory 18 => Register 6 + PC (4) -> Memory 17
                         0b0001_100000_000000u16, // Unsupported address type.
-                        0b0001_000000_000000u16,
+                        0b0000_000000_000000u16,
                         // Data
                         1200u16,
                         0u16,
@@ -285,6 +286,177 @@ mod tests {
         assert_eq!(hardware.memory[18], 0);
         assert_eq!(hardware.registers[5], 18);
         assert_eq!(hardware.registers[6], 13);
+
+        // Error: Register plus PC is not supported.
+        let clock_result = hardware.clock();
+        assert_eq!(clock_result.is_err(), true);
+    }
+
+    #[test]
+    fn instruction_add() {
+        let mut hardware = Hardware::new(19);
+
+        // -> means "points"
+        let code = vec![0b0010_000010_000111u16, // register two + register seven
+                        0b0010_010011_000110u16, // Register 3 -> memory 9 + register six
+                        0b0010_010011_010100u16, // Register 3 -> memory 7 + Register 4 -> memory 12
+                        0b0010_110000_000001u16, // [Register 0 + PC (3)] -> Memory 15 + Register 1
+                        0b0010_010101_110110u16, // Register 5 -> Memory 17 + [Register 6 + PC (4)] -> Memory 18
+                        0b0010_000100_000100u16, // Register 4 + Register 4
+                        0b0010_100000_000000u16, // Unsupported address type.
+                        // Data
+                        1200u16,
+                        0u16,
+                        2400u16,
+                        13u16, // Used as address
+                        0u16,
+                        1u16,
+                        12564u16,
+                        0u16,
+                        129u16,
+                        0u16,
+                        8u16,
+                        0u16,];
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[2] = 256;
+        hardware.registers[7] = 100;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[7], 356);
+        assert_eq!(hardware.program_counter, 1);
+        // Nothing else should be changed.
+        assert_eq!(hardware.registers[2], 256);
+
+        hardware.registers[3] = 9;
+        hardware.registers[6] = 8000;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[6], 10400);
+        assert_eq!(hardware.program_counter, 2);
+        // Nothing else should be changed.
+        assert_eq!(hardware.registers[3], 9);
+        assert_eq!(hardware.memory[9], 2400);
+
+        hardware.registers[3] = 7;
+        hardware.registers[4] = 12;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.memory[12], 1201);
+        assert_eq!(hardware.program_counter, 3);
+        // Nothing else should be changed.
+        assert_eq!(hardware.memory[7], 1200);
+        assert_eq!(hardware.registers[3], 7);
+        assert_eq!(hardware.registers[4], 12);
+
+        hardware.registers[0] = 12;
+        hardware.registers[1] = 200;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[1], 329);
+        assert_eq!(hardware.program_counter, 4);
+        // Nothing else should be changed.
+        assert_eq!(hardware.registers[0], 12);
+        assert_eq!(hardware.memory[15], 129);
+
+        hardware.registers[5] = 17;
+        hardware.registers[6] = 14;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.memory[18], 8);
+        assert_eq!(hardware.program_counter, 5);
+        // Nothing else should be changed.
+        assert_eq!(hardware.memory[17], 8);
+        assert_eq!(hardware.registers[5], 17);
+        assert_eq!(hardware.registers[6], 14);
+
+        // Saturating add
+        hardware.registers[4] = 60000;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[4], u16::MAX);
+        assert_eq!(hardware.program_counter, 6);
+
+        // Error: Register plus PC is not supported.
+        let clock_result = hardware.clock();
+        assert_eq!(clock_result.is_err(), true);
+    }
+
+    #[test]
+    fn instruction_subtract() {
+        let mut hardware = Hardware::new(19);
+
+        // -> means "points"
+        let code = vec![0b0011_000010_000111u16, // register two - register seven
+                        0b0011_010011_000110u16, // Register 3 -> memory 9 - register six
+                        0b0011_010011_010100u16, // Register 3 -> memory 7 - Register 4 -> memory 12
+                        0b0011_110000_000001u16, // Register 0 + PC (3) -> Memory 15 - Register 1
+                        0b0011_010101_110110u16, // Register 5 -> Memory 17 - Register 6 + PC (4) -> Memory 18
+                        0b0011_000101_000100u16, // Register 5 -> Memory 8 - Register 4
+                        0b0011_100000_000000u16, // Unsupported address type.
+                        // Data
+                        1200u16,
+                        0u16,
+                        2400u16,
+                        13u16, // Used as address
+                        0u16,
+                        1u16,
+                        12564u16,
+                        0u16,
+                        129u16,
+                        0u16,
+                        8u16,
+                        0u16,];
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[2] = 256;
+        hardware.registers[7] = 100;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[7], 156);
+        assert_eq!(hardware.program_counter, 1);
+        // Nothing else should be changed.
+        assert_eq!(hardware.registers[2], 256);
+
+        hardware.registers[3] = 9;
+        hardware.registers[6] = 1400;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[6], 1000);
+        assert_eq!(hardware.program_counter, 2);
+        // Nothing else should be changed.
+        assert_eq!(hardware.registers[3], 9);
+        assert_eq!(hardware.memory[9], 2400);
+
+        hardware.registers[3] = 7;
+        hardware.registers[4] = 12;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.memory[12], 1199);
+        assert_eq!(hardware.program_counter, 3);
+        // Nothing else should be changed.
+        assert_eq!(hardware.memory[7], 1200);
+        assert_eq!(hardware.registers[3], 7);
+        assert_eq!(hardware.registers[4], 12);
+
+        hardware.registers[0] = 12;
+        hardware.registers[1] = 29;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[1], 100);
+        assert_eq!(hardware.program_counter, 4);
+        // Nothing else should be changed.
+        assert_eq!(hardware.registers[0], 12);
+        assert_eq!(hardware.memory[15], 129);
+
+        hardware.registers[5] = 17;
+        hardware.registers[6] = 14;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.memory[18], 8);
+        assert_eq!(hardware.program_counter, 5);
+        // Nothing else should be changed.
+        assert_eq!(hardware.memory[17], 8);
+        assert_eq!(hardware.registers[5], 17);
+        assert_eq!(hardware.registers[6], 14);
+
+        hardware.registers[5] = 8;
+        hardware.registers[4] = 17;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[4], 0);
+        assert_eq!(hardware.program_counter, 6);
+        // Nothing else should be changed.
+        assert_eq!(hardware.registers[5], 8);
+        assert_eq!(hardware.memory[8], 0);
 
         // Error: Register plus PC is not supported.
         let clock_result = hardware.clock();

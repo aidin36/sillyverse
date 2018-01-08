@@ -22,6 +22,8 @@ impl Operations {
 
         // Double operand operations
         map.insert(OperationCode::new(0b0001_000000000000u16), copy);
+        map.insert(OperationCode::new(0b0010_000000000000u16), add);
+        map.insert(OperationCode::new(0b0011_000000000000u16), subtract);
 
         Operations {
             functions: map,
@@ -152,7 +154,7 @@ fn copy(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
 
     let source_true_address = get_true_address(hardware, source_address)?;
     let source_value = match source_true_address {
-        Address::Register(register_number) => hardware.registers[register_number  as usize],
+        Address::Register(register_number) => hardware.registers[register_number as usize],
         Address::Memory(memory_address) => hardware.memory[memory_address as usize],
         Address::RegisterPlusPC(_) =>
             return Err(format!("Invalid source address type for COPY. Instruction: {:b}",
@@ -174,6 +176,83 @@ fn copy(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
 
     return Ok(());
 }
+
+/// Adds two values.
+fn add(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+    let (first_address, second_address) = extract_two_operand_address((instruction));
+
+    let true_first_address = get_true_address(hardware, first_address)?;
+    let first_value = match true_first_address {
+        Address::Register(register_number) => hardware.registers[register_number as usize],
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+                               instruction)),
+    };
+
+    let true_second_address = get_true_address(hardware, second_address)?;
+    let second_value = match true_second_address {
+        Address::Register(register_number) => hardware.registers[register_number as usize],
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+                               instruction)),
+    };
+
+    let result = first_value.saturating_add(second_value);
+
+    // Storing the result back to the second address.
+    match true_second_address {
+        Address::Register(register_number) => hardware.registers[register_number as usize] = result,
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize] = result,
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+                               instruction)),
+    }
+
+    hardware.program_counter += 1;
+
+    return Ok(());
+}
+
+/// Subtracts two values.
+fn subtract(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+    let (first_address, second_address) = extract_two_operand_address((instruction));
+
+    let true_first_address = get_true_address(hardware, first_address)?;
+    let first_value = match true_first_address {
+        Address::Register(register_number) => hardware.registers[register_number as usize],
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+                               instruction)),
+    };
+
+    let true_second_address = get_true_address(hardware, second_address)?;
+    let second_value = match true_second_address {
+        Address::Register(register_number) => hardware.registers[register_number as usize],
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+                               instruction)),
+    };
+
+    let result = first_value.saturating_sub(second_value);
+
+    // Storing the result back to the second address.
+    match true_second_address {
+        Address::Register(register_number) => hardware.registers[register_number as usize] = result,
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize] = result,
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+                               instruction)),
+    }
+
+    hardware.program_counter += 1;
+
+    return Ok(());
+}
+
 
 #[cfg(test)]
 mod tests {
