@@ -217,6 +217,40 @@ mod tests {
     }
 
     #[test]
+    fn instruction_skip_if_zero() {
+        let mut hardware = Hardware::new(11);
+
+        let code = vec![0b0000_000010_000001u16, // Register 0
+                        0b0000000000000000u16,
+                        0b0000_000010_010010u16, // Register 2 -> Memory 10
+                        0b0000_000010_110011u16, // Register 3 + PC -> Memory 9
+                        0b0000000000000000u16,
+                        0b0000_000010_100011u16, // Unsupported address type
+                        0b0000000000000000u16,
+                        0b0000000000000000u16,
+                        0b0000000000000100u16, // Non-zero
+                        0b0000000000000000u16, // Zero
+                        0b0000000000000100u16, // Non-zero
+                        ];
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[0] = 0;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 2);
+
+        hardware.registers[2] = 10;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 3);
+
+        hardware.registers[3] = 6;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 5);
+
+        let clock_result = hardware.clock();
+        assert_eq!(clock_result.is_err(), true);
+    }
+
+    #[test]
     fn instruction_copy() {
         let mut hardware = Hardware::new(19);
 

@@ -19,6 +19,7 @@ impl Operations {
 
         // Single operand operations
         map.insert(OperationCode::new(0b0000_000001_000000u16), jump);
+        map.insert(OperationCode::new(0b0000_000010_000000u16), skip_if_zero);
 
         // Double operand operations
         map.insert(OperationCode::new(0b0001_000000000000u16), copy);
@@ -143,6 +144,28 @@ fn jump(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
             hardware.program_counter = hardware.memory[memory_address as usize],
         Address::RegisterPlusPC(jump_address) =>
             hardware.program_counter = jump_address,
+    }
+
+    return Ok(());
+}
+
+/// Skips next instruction if operand is pointing to an address with zero value.
+fn skip_if_zero(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+    let address = extract_one_operand_address(instruction);
+
+    let true_address = get_true_address(hardware, address)?;
+
+    let address_value = match true_address {
+        Address::Register(register_number) => hardware.registers[register_number as usize],
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Unsupported address type of JUMP_IF_ZERO. Instruction {:b}", instruction)),
+    };
+
+    if address_value == 0 {
+        hardware.program_counter += 2;
+    } else {
+        hardware.program_counter += 1;
     }
 
     return Ok(());
