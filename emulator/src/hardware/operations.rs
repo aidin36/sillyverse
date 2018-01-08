@@ -116,7 +116,7 @@ fn extract_one_operand_address(instruction: u16) -> u8 {
 
 /// Extracts addresses from a two-operand instruction.
 fn extract_two_operand_address(instruction: u16) -> (u8, u8) {
-    let first_address = (instruction & 0b0000_111111_000000u16) as u8;
+    let first_address = ((instruction & 0b0000_111111_000000u16) >> 6) as u8;
     let second_address = (instruction & 0b0000_000000_111111u16) as u8;
 
     return (first_address, second_address);
@@ -148,9 +148,31 @@ fn jump(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
 
 /// Copy value of an address to another.
 fn copy(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
-    let (first_address, second_address) = extract_two_operand_address((instruction));
+    let (source_address, destination_address) = extract_two_operand_address((instruction));
 
-    return Err(String::from("Not implemented."));
+    let source_true_address = get_true_address(hardware, source_address)?;
+    let source_value = match source_true_address {
+        Address::Register(register_number) => hardware.registers[register_number  as usize],
+        Address::Memory(memory_address) => hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid source address type for COPY. Instruction: {:b}",
+                               instruction)),
+    };
+
+    let destination_true_address = get_true_address(hardware, destination_address)?;
+    match destination_true_address {
+        Address::Register(register_number) =>
+            hardware.registers[register_number as usize] = source_value,
+        Address::Memory(memory_address) =>
+            hardware.memory[memory_address as usize] = source_value,
+        Address::RegisterPlusPC(_) =>
+            return Err(format!("Invalid destination address type for COPY. Instruction: {:b}",
+                               instruction)),
+    }
+
+    hardware.program_counter += 1;
+
+    return Ok(());
 }
 
 #[cfg(test)]
