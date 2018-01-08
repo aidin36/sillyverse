@@ -64,6 +64,10 @@ impl Hardware {
     /// (hardware state is corrupted).
     pub fn clock(&mut self) -> Result<(), String>{
 
+        if self.error_flag {
+            return Err(String::from("This hardware is in Error state."));
+        }
+
         // Converting type for easier usage.
         let program_counter = self.program_counter as usize;
 
@@ -76,7 +80,13 @@ impl Hardware {
 
         // Executing instruction. Note the "?" (-:
         let executer_function = self.operations.get_function(instruction)?;
-        executer_function(self, instruction)?;
+        let execute_result = executer_function(self, instruction);
+
+        if execute_result.is_err() {
+            // This hardware is no longer in a valid state.
+            self.error_flag = true;
+            return execute_result;
+        }
 
         // Nothing goes wrong.
         return Ok(());
