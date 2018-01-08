@@ -25,6 +25,8 @@ impl Operations {
         map.insert(OperationCode::new(0b0001_000000000000u16), copy);
         map.insert(OperationCode::new(0b0010_000000000000u16), add);
         map.insert(OperationCode::new(0b0011_000000000000u16), subtract);
+        map.insert(OperationCode::new(0b0100_000000000000u16), skip_if_equal);
+        map.insert(OperationCode::new(0b0101_000000000000u16), skip_if_greater);
 
         Operations {
             functions: map,
@@ -125,6 +127,72 @@ fn extract_two_operand_address(instruction: u16) -> (u8, u8) {
     return (first_address, second_address);
 }
 
+/// Extracts value that an address is pointing to, from a
+/// one-operand instruction.
+fn extract_one_operand_value(hardware: &Hardware, instruction: u16, supports_register_pc: bool)
+    -> Result<u16, String> {
+
+    let address = extract_one_operand_address(instruction);
+
+    let true_address = get_true_address(hardware, address)?;
+
+    let value = match true_address {
+        Address::Register(register_number) =>
+            hardware.registers[register_number as usize],
+        Address::Memory(memory_address) =>
+            hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(jump_address) => {
+            if !supports_register_pc {
+                return Err(format!("Unsupported address type. Instruction: {:b}", instruction));
+            }
+            jump_address
+        },
+    };
+
+    return Ok(value);
+}
+
+/// Extracts value that an address is pointing to, from a
+/// two-operand instruction.
+///
+/// @supports_register_pc: Whether the operation supports RegisterPlusPC address type.
+///     If set to false, an Err will return in case of RegisterPlusPC address.
+fn extract_two_operand_value(hardware: &Hardware, instruction: u16, supports_register_pc: bool)
+    -> Result<(u16, u16), String> {
+
+    let (first_address, second_address) = extract_two_operand_address(instruction);
+
+    let first_true_address = get_true_address(hardware, first_address)?;
+    let first_value = match first_true_address {
+        Address::Register(register_number) =>
+            hardware.registers[register_number as usize],
+        Address::Memory(memory_address) =>
+            hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(jump_address) => {
+            if !supports_register_pc {
+                return Err(format!("Unsupported address type. Instruction: {:b}", instruction));
+            }
+            jump_address
+        },
+    };
+
+    let second_true_address = get_true_address(hardware, second_address)?;
+    let second_value = match second_true_address {
+        Address::Register(register_number) =>
+            hardware.registers[register_number as usize],
+        Address::Memory(memory_address) =>
+            hardware.memory[memory_address as usize],
+        Address::RegisterPlusPC(jump_address) => {
+            if !supports_register_pc {
+                return Err(format!("Unsupported address type. Instruction: {:b}", instruction));
+            }
+            jump_address
+        },
+    };
+
+    return Ok((first_value, second_value));
+}
+
 /// It just increases program counter (skips this instruction).
 fn nop(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
     hardware.program_counter += 1;
@@ -133,34 +201,17 @@ fn nop(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
 
 /// Jumps to the address inside the instruction.
 fn jump(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
-    let address = extract_one_operand_address(instruction);
 
-    let true_address = get_true_address(hardware, address)?;
-
-    match true_address {
-        Address::Register(register_number) =>
-            hardware.program_counter = hardware.registers[register_number as usize],
-        Address::Memory(memory_address) =>
-            hardware.program_counter = hardware.memory[memory_address as usize],
-        Address::RegisterPlusPC(jump_address) =>
-            hardware.program_counter = jump_address,
-    }
+    hardware.program_counter =
+        extract_one_operand_value(hardware, instruction, true)?;
 
     return Ok(());
 }
 
 /// Skips next instruction if operand is pointing to an address with zero value.
 fn skip_if_zero(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
-    let address = extract_one_operand_address(instruction);
 
-    let true_address = get_true_address(hardware, address)?;
-
-    let address_value = match true_address {
-        Address::Register(register_number) => hardware.registers[register_number as usize],
-        Address::Memory(memory_address) => hardware.memory[memory_address as usize],
-        Address::RegisterPlusPC(_) =>
-            return Err(format!("Unsupported address type of JUMP_IF_ZERO. Instruction {:b}", instruction)),
-    };
+    let address_value = extract_one_operand_value(hardware, instruction, false)?;
 
     if address_value == 0 {
         hardware.program_counter += 2;
@@ -272,6 +323,33 @@ fn subtract(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
     }
 
     hardware.program_counter += 1;
+
+    return Ok(());
+}
+
+fn skip_if_equal(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+
+    let (first_value, second_value) =
+        extract_two_operand_value(hardware, instruction, false)?;
+
+    if first_value == second_value {
+        hardware.program_counter += 2;
+    } else {
+        hardware.program_counter += 1;
+    }
+
+    return Ok(());
+}
+
+fn skip_if_greater(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+    let (first_value, second_value) =
+        extract_two_operand_value(hardware, instruction, false)?;
+
+    if first_value > second_value {
+        hardware.program_counter += 2;
+    } else {
+        hardware.program_counter += 1;
+    }
 
     return Ok(());
 }

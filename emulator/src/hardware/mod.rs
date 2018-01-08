@@ -220,7 +220,7 @@ mod tests {
     fn instruction_skip_if_zero() {
         let mut hardware = Hardware::new(11);
 
-        let code = vec![0b0000_000010_000001u16, // Register 0
+        let code = vec![0b0000_000010_000000u16, // Register 0
                         0b0000000000000000u16,
                         0b0000_000010_010010u16, // Register 2 -> Memory 10
                         0b0000_000010_110011u16, // Register 3 + PC -> Memory 9
@@ -496,4 +496,79 @@ mod tests {
         let clock_result = hardware.clock();
         assert_eq!(clock_result.is_err(), true);
     }
+
+    #[test]
+    fn instruction_skip_if_equal() {
+        let mut hardware = Hardware::new(11);
+
+        let code = vec![0b0100_000000_000001u16, // Register 0 = Register 1
+                        0b0000000000000000u16,
+                        0b0100_010010_000110u16, // Register 2 -> Memory 8 = Register 6
+                        0b0100_110011_010101u16, // Register 3 + PC -> Memory 8 = Register 5 -> Memory 10
+                        0b0000000000000000u16,
+                        0b0100_000010_100011u16, // Unsupported address type
+                        0b0000000000000000u16,
+                        0b0000000000000000u16,
+                        0b0000000000000100u16, // 4
+                        0b0000000000000000u16,
+                        0b0000000000000100u16, // 4
+        ];
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[0] = 2000;
+        hardware.registers[1] = 2000;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 2);
+
+        hardware.registers[2] = 8;
+        hardware.registers[6] = 7;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 3);
+
+        hardware.registers[3] = 5;
+        hardware.registers[5] = 10;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 5);
+
+        let clock_result = hardware.clock();
+        assert_eq!(clock_result.is_err(), true);
+    }
+
+    #[test]
+    fn instruction_skip_if_greater() {
+        let mut hardware = Hardware::new(11);
+
+        let code = vec![0b0101_000000_000001u16, // Register 0 > Register 1
+                        0b0000000000000000u16,
+                        0b0101_010010_000110u16, // Register 2 -> Memory 8 > Register 6
+                        0b0101_110011_010101u16, // Register 3 + PC -> Memory 8 > Register 5 -> Memory 10
+                        0b0000000000000000u16,
+                        0b0101_000010_100011u16, // Unsupported address type
+                        0b0000000000000000u16,
+                        0b0000000000000000u16,
+                        0b0100000000000101u16, // 16389
+                        0b0000000000000000u16,
+                        0b0001001001001101u16, // 4685
+        ];
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[0] = 2001;
+        hardware.registers[1] = 2000;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 2);
+
+        hardware.registers[2] = 8;
+        hardware.registers[6] = 16390;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 3);
+
+        hardware.registers[3] = 5;
+        hardware.registers[5] = 10;
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 5);
+
+        let clock_result = hardware.clock();
+        assert_eq!(clock_result.is_err(), true);
+    }
+
 }
