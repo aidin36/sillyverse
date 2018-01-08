@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn get_memory_type_one() {
 
-        let mut hardware = Hardware::new(1);
+        let hardware = Hardware::new(1);
 
         let address = get_true_address(&hardware, 0b0000_0000u8).unwrap();
         match address {
