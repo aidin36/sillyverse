@@ -77,8 +77,8 @@ impl Translator {
 }
 
 fn translate_address(address_str: &String) -> Result<u8, String> {
-    let mut address_type = 0u8;
-    let mut address_value_str: String = String::new();
+    let address_type: u8;
+    let address_value_str: String;
 
     // Our address are 6 bits. So, first two bits are always zero.
     // Second two bits are address type, and rest of it is the address value.
@@ -141,4 +141,64 @@ fn copy(args: Vec<String>) -> Result<u16, String> {
 
     let first_address: u16 = (first_address as u16) <<6;
     return Ok(0b0001_000000000000u16 | first_address | (second_address as u16));
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn comment() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("; comment")).unwrap();
+        assert_eq!(result.is_none(), true);
+
+        let result = translator.translate_line(String::from("    ; comment")).unwrap();
+        assert_eq!(result.is_none(), true);
+    }
+
+    #[test]
+    fn nop() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("NOP")).unwrap();
+        assert_eq!(result.unwrap(), 0u16);
+
+        let result = translator.translate_line(String::from("nop  ")).unwrap();
+        assert_eq!(result.unwrap(), 0u16);
+
+        let result = translator.translate_line(String::from("nOp ; Comment")).unwrap();
+        assert_eq!(result.unwrap(), 0u16);
+
+        let result = translator.translate_line(String::from("NOP  R1"));
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn copy() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("COPY R1 M6")).unwrap();
+        assert_eq!(result.unwrap(), 0b0001_000001_010110u16);
+
+        let result = translator.translate_line(String::from("COPY   RP2  RPM3")).unwrap();
+        assert_eq!(result.unwrap(), 0b0001_100010_110011u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("COPY  M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("COPY M20 M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("COPY ;bad copy"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("COPY 120 14"));
+        assert_eq!(result.is_err(), true);
+    }
 }
