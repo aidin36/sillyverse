@@ -13,6 +13,7 @@ impl Translator {
         let mut map: HashMap<&'static str, fn(Vec<String>) -> Result<u16, String>> = HashMap::new();
 
         map.insert("nop", nop);
+        map.insert("copy", copy);
 
         Translator {
             operations_map: map,
@@ -46,6 +47,8 @@ impl Translator {
         // Executing the func.
         let result = func(line_parts)?;
 
+        println!("{:b}", result);
+
         return Ok(Some(result));
     }
 
@@ -73,11 +76,69 @@ impl Translator {
 
 }
 
-fn nop(params: Vec<String>) -> Result<u16, String> {
+fn translate_address(address_str: &String) -> Result<u8, String> {
+    let mut address_type = 0u8;
+    let mut address_value_str: String = String::new();
 
-    if params.len() != 1 {
-        return Err(String::from("NOP doesn't accept parameters."));
+    // Our address are 6 bits. So, first two bits are always zero.
+    // Second two bits are address type, and rest of it is the address value.
+
+    // Checking address type.
+    if address_str.starts_with("rpm") {
+        address_type = 0b00110000u8;
+        address_value_str = address_str.replace("rpm", "");
+
+    } else if address_str.starts_with("rp") {
+        address_type = 0b00100000u8;
+        address_value_str = address_str.replace("rp", "");
+
+    } else if address_str.starts_with("m") {
+        address_type = 0b00010000u8;
+        address_value_str = address_str.replace("m", "");
+
+    } else if address_str.starts_with("r") {
+        address_type = 0b00000000u8;
+        address_value_str = address_str.replace("r", "");
+
+    } else {
+        return Err(format!("Unknown address type: {}", address_str));
+    }
+
+    // Trying to get address value.
+    let address_value = match address_value_str.parse::<u8>() {
+        Ok(v) => v,
+        Err(error) => return Err(format!(
+            "[{}] is not a number. Error while parsing: {}",
+            address_value_str,
+            error)),
+    };
+
+    if address_value > 7 {
+        return Err(format!("Expected address less than 7, found: {}", address_value));
+    }
+
+    // Appending address type and its value.
+    return Ok(address_type | address_value);
+}
+
+fn nop(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 1 {
+        return Err(String::from("NOP doesn't accept arguments."));
     }
 
     return Ok(0u16);
+}
+
+fn copy(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 3 {
+        return Err(String::from("COPY requires exactly two arguments."));
+    }
+
+    let first_address = translate_address(&args[1])?;
+    let second_address = translate_address(&args[2])?;
+
+    let first_address: u16 = (first_address as u16) <<6;
+    return Ok(0b0001_000000000000u16 | first_address | (second_address as u16));
 }
