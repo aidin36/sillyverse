@@ -15,6 +15,7 @@ impl Translator {
         map.insert("nop", nop);
         map.insert("copy", copy);
         map.insert("jump", jump);
+        map.insert("add", add);
 
         Translator {
             operations_map: map,
@@ -155,6 +156,19 @@ fn jump(args: Vec<String>) -> Result<u16, String> {
     return Ok(0b0000_000001_000000u16 | (address as u16));
 }
 
+fn add(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 3 {
+        return Err(format!("ADD requires exactly two arguments, {} given.", args.len() -1));
+    }
+
+    let first_address = translate_address(&args[1])?;
+    let second_address = translate_address(&args[2])?;
+
+    let first_address: u16 = (first_address as u16) <<6;
+    return Ok(0b0010_000000000000u16 | first_address | (second_address as u16));
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -244,4 +258,30 @@ mod tests {
         let result = translator.translate_line(String::from("JUMP 14"));
         assert_eq!(result.is_err(), true);
     }
+
+    #[test]
+    fn add() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("ADD R1 M6")).unwrap();
+        assert_eq!(result.unwrap(), 0b0010_000001_010110u16);
+
+        let result = translator.translate_line(String::from("ADD   RP2  RPM3")).unwrap();
+        assert_eq!(result.unwrap(), 0b0010_100010_110011u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("ADD  M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("ADD M20 M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("ADD 120 14"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("ADD"));
+        assert_eq!(result.is_err(), true);
+    }
+
 }
