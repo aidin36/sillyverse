@@ -15,7 +15,7 @@ fn print_usage(program_name: String) {
     println!(" ");
 }
 
-fn compile_file(input_path: String, output_path: String) {
+fn compile_file(input_path: &String, output_path: &String) {
     let input_file = File::open(input_path).expect("Could not open input file.");
     let output_file = File::create(output_path).expect("Could not open output file.");
 
@@ -46,8 +46,8 @@ fn compile_file(input_path: String, output_path: String) {
             },
         };
 
-        let instruction_bytes = [instruction as u8,
-                                         ((instruction & 0b1111111100000000u16) >> 8) as u8];
+        let instruction_bytes = [((instruction & 0b1111111100000000u16) >> 8) as u8,
+                                         instruction as u8];
         output_file_writer.write_all(&instruction_bytes)
             .expect("Could not write to output file.");
     }
@@ -63,5 +63,57 @@ fn main() {
     let input_file = args.nth(1).unwrap();
     let output_file = format!("{}.bin", input_file);
 
-    compile_file(input_file, output_file);
+    compile_file(&input_file, &output_file);
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use std::env::temp_dir;
+    use std::io::Read;
+
+    #[test]
+    fn application_1() {
+        let mut assembly_file = temp_dir();
+        assembly_file.push("test_application_1_df3457392");
+
+        let mut f = File::create(&assembly_file).unwrap();
+
+        f.write_all(b"; A meaningless program.\n\
+                    COPY   M1 R2\n \
+                    COPY   M7 R1\n \
+                    ADD    R0 R1\n \
+                    COPY   R1 RPM5\n \
+                    JUMP    R2 ;zero\n \
+                    NOP\n \
+                    NOP\n \
+                    NOP\n").unwrap();
+
+        f.flush().unwrap();
+
+        let input_path = String::from(assembly_file.to_str().unwrap());
+        let output_path = format!("{}.bin", input_path);
+
+        compile_file(&input_path, &output_path);
+
+        let mut output_file = File::open(output_path).unwrap();
+        let mut output_content: Vec<u8> = Vec::new();
+        output_file.read_to_end(&mut output_content).unwrap();
+
+        let expected_result: Vec<u8> =
+            vec![0b0001_0100u8, 0b01_000010u8,
+                 0b0001_0101u8, 0b11_000001u8,
+                 0b0010_0000u8, 0b00_000001u8,
+                 0b0001_0000u8, 0b01_110101u8,
+                 0b0000_0000u8, 0b01_000010u8,
+                 0u8, 0u8,
+                 0u8, 0u8,
+                 0u8, 0u8,];
+
+        for i in 0..8 {
+            assert_eq!(output_content[i], expected_result[i]);
+        }
+    }
 }
