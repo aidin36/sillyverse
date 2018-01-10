@@ -14,6 +14,7 @@ impl Translator {
 
         map.insert("nop", nop);
         map.insert("copy", copy);
+        map.insert("jump", jump);
 
         Translator {
             operations_map: map,
@@ -133,7 +134,7 @@ fn nop(args: Vec<String>) -> Result<u16, String> {
 fn copy(args: Vec<String>) -> Result<u16, String> {
 
     if args.len() != 3 {
-        return Err(String::from("COPY requires exactly two arguments."));
+        return Err(format!("COPY requires exactly two arguments, {} given.", args.len() -1));
     }
 
     let first_address = translate_address(&args[1])?;
@@ -141,6 +142,17 @@ fn copy(args: Vec<String>) -> Result<u16, String> {
 
     let first_address: u16 = (first_address as u16) <<6;
     return Ok(0b0001_000000000000u16 | first_address | (second_address as u16));
+}
+
+fn jump(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 2 {
+        return Err(format!("JUMP requires exactly one arguments, {} given.", args.len() -1));
+    }
+
+    let address = translate_address(&args[1])?;
+
+    return Ok(0b0000_000001_000000u16 | (address as u16));
 }
 
 
@@ -199,6 +211,37 @@ mod tests {
         assert_eq!(result.is_err(), true);
 
         let result = translator.translate_line(String::from("COPY 120 14"));
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn jump() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("JUMP R1  ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000001_000001u16);
+
+        let result = translator.translate_line(String::from("jump  m3 ;comment R2 ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000001_010011u16);
+
+        let result = translator.translate_line(String::from("JuMp Rp4")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000001_100100u16);
+
+        let result = translator.translate_line(String::from("JUmP RPm5")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000001_110101u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("JUMP "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("JUMP ; comment"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("JUMP R1 R4"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("JUMP 14"));
         assert_eq!(result.is_err(), true);
     }
 }
