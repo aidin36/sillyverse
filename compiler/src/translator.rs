@@ -49,8 +49,6 @@ impl Translator {
         // Executing the func.
         let result = func(line_parts)?;
 
-        println!("{:b}", result);
-
         return Ok(Some(result));
     }
 
