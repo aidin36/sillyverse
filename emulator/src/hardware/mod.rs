@@ -92,6 +92,37 @@ impl Hardware {
         return Ok(());
     }
 
+    /// Increases the memory by the specified additional bytes.
+    ///
+    /// Returns error if new size would become more than maxed allowed (65536)
+    /// Memory won't be touched if error return.
+    ///
+    /// Returns new size if everything is Ok.
+    ///
+    /// @additional: Additional bytes to add to the memory size.
+    pub fn increase_memory(&mut self, additional: u16) -> Result<u16, &'static str> {
+
+        if additional == 0 {
+            return Err("Additional bytes cannot be zero.");
+        }
+
+        let current_size = self.memory.len() as u16;
+        let new_size = match current_size.checked_add(additional) {
+            Some(v) => v,
+            None => return Err("New size will become more than 65536 bytes."),
+        };
+
+        // For better performance.
+        self.memory.reserve(additional as usize);
+
+        // Filling new memory with zeros.
+        // TODO: There should be a faster way.
+        for i in current_size..new_size {
+            self.memory.push(0u16);
+        }
+
+        return Ok(new_size as u16);
+    }
 }
 
 
@@ -146,6 +177,29 @@ mod tests {
         let data = vec![1, 2, 3, 4, 5];
         let load_result = hardware.load(&data, 1022);
         assert_eq!(load_result.is_err(), true);
+    }
+
+    #[test]
+    fn increase_memory() {
+        let mut hardware = Hardware::new(3000);
+
+        assert_eq!(hardware.memory.len(), 3000);
+
+        let new_size = hardware.increase_memory(2500).unwrap();
+        assert_eq!(hardware.memory.len(), 5500);
+        assert_eq!(new_size, 5500);
+
+        let new_size = hardware.increase_memory(1).unwrap();
+        assert_eq!(hardware.memory.len(), 5501);
+        assert_eq!(new_size, 5501);
+
+        // Zero error.
+        let result = hardware.increase_memory(0);
+        assert_eq!(result.is_err(), true);
+
+        // Too big memory error.
+        let result = hardware.increase_memory(61000);
+        assert_eq!(result.is_err(), true);
     }
 
     #[test]
