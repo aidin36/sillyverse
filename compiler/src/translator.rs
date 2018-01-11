@@ -18,6 +18,8 @@ impl Translator {
         map.insert("skip_if_zero", skip_if_zero);
         map.insert("add", add);
         map.insert("subtract", subtract);
+        map.insert("skip_if_equal", skip_if_equal);
+        map.insert("skip_if_greater", skip_if_greater);
 
         Translator {
             operations_map: map,
@@ -193,6 +195,33 @@ fn subtract(args: Vec<String>) -> Result<u16, String> {
     return Ok(0b0011_000000000000u16 | first_address | (second_address as u16));
 }
 
+fn skip_if_equal(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 3 {
+        return Err(
+            format!("SKIP_IF_EQUAL requires exactly two arguments, {} given.", args.len() -1));
+    }
+
+    let first_address = translate_address(&args[1])?;
+    let second_address = translate_address(&args[2])?;
+
+    let first_address: u16 = (first_address as u16) <<6;
+    return Ok(0b00101_000000000000u16 | first_address | (second_address as u16));
+}
+
+fn skip_if_greater(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 3 {
+        return Err(
+            format!("SKIP_IF_GREATER requires exactly two arguments, {} given.", args.len() -1));
+    }
+
+    let first_address = translate_address(&args[1])?;
+    let second_address = translate_address(&args[2])?;
+
+    let first_address: u16 = (first_address as u16) <<6;
+    return Ok(0b00110_000000000000u16 | first_address | (second_address as u16));
+}
 
 #[cfg(test)]
 mod tests {
@@ -367,4 +396,53 @@ mod tests {
         assert_eq!(result.is_err(), true);
     }
 
+    #[test]
+    fn skip_if_equal() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("SKIP_IF_EQUAL R3 M6")).unwrap();
+        assert_eq!(result.unwrap(), 0b0101_000011_010110u16);
+
+        let result = translator.translate_line(String::from("skip_if_equal   M2  RPM3")).unwrap();
+        assert_eq!(result.unwrap(), 0b0101_010010_110011u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("SKIP_IF_EQUAL  M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_EQUAL M2 RPM8"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_EQUAL 120 14"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_EQUAL"));
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn skip_if_greater() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("   SKIP_IF_GREATER  R3 M6 ;M80")).unwrap();
+        assert_eq!(result.unwrap(), 0b0110_000011_010110u16);
+
+        let result = translator.translate_line(String::from("skip_if_greater   M0  RPM3")).unwrap();
+        assert_eq!(result.unwrap(), 0b0110_010000_110011u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("SKIP_IF_GREATER  M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_GREATER M2 R9"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_GREATER 120 14"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_GREATER"));
+        assert_eq!(result.is_err(), true);
+    }
 }
