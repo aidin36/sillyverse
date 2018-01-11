@@ -581,4 +581,48 @@ mod tests {
         assert_eq!(clock_result.is_err(), true);
     }
 
+    #[test]
+    fn instruction_set() {
+        let mut hardware = Hardware::new(3);
+
+        let code = vec![0b0110_010_001001101u16,
+                        0b0110_111_111111111u16,
+                        0b0110_010_000000000u16];
+        hardware.load(&code, 0);
+
+
+        hardware.registers[4] = 100;
+        hardware.registers[3] = 120;
+        hardware.registers[1] = 140;
+        hardware.registers[0] = 1000;
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[2], 0b0000_000_001001101u16);
+        assert_eq!(hardware.program_counter, 1);
+        // Nothing else should change.
+        assert_eq!(hardware.registers[4], 100);
+        assert_eq!(hardware.registers[3], 120);
+        assert_eq!(hardware.registers[1], 140);
+        assert_eq!(hardware.registers[0], 1000);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[7], 0b0000_000_111111111u16);
+        assert_eq!(hardware.program_counter, 2);
+        // Nothing else should change.
+        assert_eq!(hardware.registers[2], 0b0000_000_001001101u16);
+        assert_eq!(hardware.registers[4], 100);
+        assert_eq!(hardware.registers[3], 120);
+        assert_eq!(hardware.registers[1], 140);
+        assert_eq!(hardware.registers[0], 1000);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.registers[2], 0u16);
+        assert_eq!(hardware.program_counter, 3);
+        // Nothing else should change.
+        assert_eq!(hardware.registers[7], 0b0000_000_111111111u16);
+        assert_eq!(hardware.registers[4], 100);
+        assert_eq!(hardware.registers[3], 120);
+        assert_eq!(hardware.registers[1], 140);
+        assert_eq!(hardware.registers[0], 1000);
+    }
 }

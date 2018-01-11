@@ -27,6 +27,7 @@ impl Operations {
         map.insert(OperationCode::new(0b0011_000000000000u16), subtract);
         map.insert(OperationCode::new(0b0100_000000000000u16), skip_if_equal);
         map.insert(OperationCode::new(0b0101_000000000000u16), skip_if_greater);
+        map.insert(OperationCode::new(0b0110_000000000000u16), set);
 
         Operations {
             functions: map,
@@ -327,6 +328,7 @@ fn subtract(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
     return Ok(());
 }
 
+/// Skips the next instruction if value of two operands are equal.
 fn skip_if_equal(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
 
     let (first_value, second_value) =
@@ -341,6 +343,7 @@ fn skip_if_equal(hardware: &mut Hardware, instruction: u16) -> Result<(), String
     return Ok(());
 }
 
+/// Skips the next instruction if value of first operand is greater than the second one.
 fn skip_if_greater(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
     let (first_value, second_value) =
         extract_two_operand_value(hardware, instruction, false)?;
@@ -354,6 +357,17 @@ fn skip_if_greater(hardware: &mut Hardware, instruction: u16) -> Result<(), Stri
     return Ok(());
 }
 
+/// Sets a constant to a register.
+fn set(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+
+    let register_number = (0b0000_111_000000000u16 & instruction) >> 9;
+    let constant = 0b0000_000_111111111u16 & instruction;
+
+    hardware.registers[register_number as usize] = constant;
+    hardware.program_counter += 1;
+
+    return Ok(());
+}
 
 #[cfg(test)]
 mod tests {
