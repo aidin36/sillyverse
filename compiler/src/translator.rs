@@ -15,6 +15,7 @@ impl Translator {
         map.insert("nop", nop);
         map.insert("copy", copy);
         map.insert("jump", jump);
+        map.insert("skip_if_zero", skip_if_zero);
         map.insert("add", add);
 
         Translator {
@@ -167,6 +168,16 @@ fn add(args: Vec<String>) -> Result<u16, String> {
     return Ok(0b0010_000000000000u16 | first_address | (second_address as u16));
 }
 
+fn skip_if_zero(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 2 {
+        return Err(format!("SKIP_IF_ZERO requires exactly one arguments, {} given.", args.len() -1));
+    }
+
+    let address = translate_address(&args[1])?;
+
+    return Ok(0b0000_000010_000000u16 | (address as u16));
+}
 
 #[cfg(test)]
 mod tests {
@@ -279,6 +290,40 @@ mod tests {
         assert_eq!(result.is_err(), true);
 
         let result = translator.translate_line(String::from("ADD"));
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn skip_if_zero() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("SKIP_IF_ZERO R1  ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000010_000001u16);
+
+        let result = translator.translate_line(String::from("skip_if_zero  m7 ;comment R2 ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000010_010111u16);
+
+        let result = translator.translate_line(String::from("skip_IF_zero Rp0")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000010_100000u16);
+
+        let result = translator.translate_line(String::from("SKIP_IF_ZERO RPm5")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000010_110101u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("SKIP_IF_ZERO "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_ZERO ; comment"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_ZERO M1 RP4"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_ZERO R12"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SKIP_IF_ZERO 0"));
         assert_eq!(result.is_err(), true);
     }
 
