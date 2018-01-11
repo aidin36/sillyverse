@@ -20,6 +20,7 @@ impl Translator {
         map.insert("subtract", subtract);
         map.insert("skip_if_equal", skip_if_equal);
         map.insert("skip_if_greater", skip_if_greater);
+        map.insert("set", set);
 
         Translator {
             operations_map: map,
@@ -223,6 +224,39 @@ fn skip_if_greater(args: Vec<String>) -> Result<u16, String> {
     return Ok(0b00110_000000000000u16 | first_address | (second_address as u16));
 }
 
+fn set(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 3 {
+        return Err(format!("SET requires exactly two arguments, {} given.", args.len() -1));
+    }
+
+    if !args[1].starts_with("r") {
+        return Err(format!("SET only accepts register addresses. Found: {}", args[1]));
+    }
+
+    let register_number = match args[1].replace("r", "").parse::<u8>() {
+        Ok(v) => v,
+        Err(e) =>
+            return Err(format!("Provided register is not a number: [{}]. Error: {}", args[1], e)),
+    };
+
+    if register_number > 7 {
+        return Err(format!("Register number should be less than 7: {}", args[1]));
+    }
+
+    let constant = match args[2].parse::<u16>() {
+        Ok(v) => v,
+        Err(e) => return Err(format!(
+            "Second argument of SET must be a positive number: [{}] Error: {}", args[2], e)),
+    };
+
+    if constant >= 512 {
+        return Err(format!("Constant of SET should be less than 512: [{}]", constant));
+    }
+
+    return Ok(0b0110_000_000000000u16 | ((register_number as u16) <<9) | constant);
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -378,7 +412,7 @@ mod tests {
         let result = translator.translate_line(String::from("SUBTRACT R3 M5")).unwrap();
         assert_eq!(result.unwrap(), 0b0011_000011_010101u16);
 
-        let result = translator.translate_line(String::from("subtract   RP7  RPM3")).unwrap();
+        let result = translator.translate_line(String::from("subtract   RP7  rpm3")).unwrap();
         assert_eq!(result.unwrap(), 0b0011_100111_110011u16);
 
         // Testing errors.
@@ -403,7 +437,7 @@ mod tests {
         let result = translator.translate_line(String::from("SKIP_IF_EQUAL R3 M6")).unwrap();
         assert_eq!(result.unwrap(), 0b0101_000011_010110u16);
 
-        let result = translator.translate_line(String::from("skip_if_equal   M2  RPM3")).unwrap();
+        let result = translator.translate_line(String::from("skip_if_equal   m2  RPM3")).unwrap();
         assert_eq!(result.unwrap(), 0b0101_010010_110011u16);
 
         // Testing errors.
@@ -445,4 +479,43 @@ mod tests {
         let result = translator.translate_line(String::from("SKIP_IF_GREATER"));
         assert_eq!(result.is_err(), true);
     }
+
+    #[test]
+    fn set() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("SET R1 120")).unwrap();
+        assert_eq!(result.unwrap(), 0b0110_001_001111000u16);
+
+        let result = translator.translate_line(String::from("  set r7 511  ;")).unwrap();
+        assert_eq!(result.unwrap(), 0b0110_111_111111111u16);
+
+        let result = translator.translate_line(String::from("  SET   R0 0 ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0110_000_000000000u16);
+
+        // Checking errors.
+
+        let result = translator.translate_line(String::from("  SET   R0 "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SET   R9 10 "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SET  R1 10 32 "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SET R0 512 "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SET R1 R12"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SET R1 R7"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SET M1 20"));
+        assert_eq!(result.is_err(), true);
+
+    }
+
 }
