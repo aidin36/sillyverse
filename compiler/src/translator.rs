@@ -17,6 +17,7 @@ impl Translator {
         map.insert("jump", jump);
         map.insert("skip_if_zero", skip_if_zero);
         map.insert("add", add);
+        map.insert("subtract", subtract);
 
         Translator {
             operations_map: map,
@@ -155,6 +156,17 @@ fn jump(args: Vec<String>) -> Result<u16, String> {
     return Ok(0b0000_000001_000000u16 | (address as u16));
 }
 
+fn skip_if_zero(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 2 {
+        return Err(format!("SKIP_IF_ZERO requires exactly one arguments, {} given.", args.len() -1));
+    }
+
+    let address = translate_address(&args[1])?;
+
+    return Ok(0b0000_000010_000000u16 | (address as u16));
+}
+
 fn add(args: Vec<String>) -> Result<u16, String> {
 
     if args.len() != 3 {
@@ -168,16 +180,19 @@ fn add(args: Vec<String>) -> Result<u16, String> {
     return Ok(0b0010_000000000000u16 | first_address | (second_address as u16));
 }
 
-fn skip_if_zero(args: Vec<String>) -> Result<u16, String> {
+fn subtract(args: Vec<String>) -> Result<u16, String> {
 
-    if args.len() != 2 {
-        return Err(format!("SKIP_IF_ZERO requires exactly one arguments, {} given.", args.len() -1));
+    if args.len() != 3 {
+        return Err(format!("SUBTRACT requires exactly two arguments, {} given.", args.len() -1));
     }
 
-    let address = translate_address(&args[1])?;
+    let first_address = translate_address(&args[1])?;
+    let second_address = translate_address(&args[2])?;
 
-    return Ok(0b0000_000010_000000u16 | (address as u16));
+    let first_address: u16 = (first_address as u16) <<6;
+    return Ok(0b0011_000000000000u16 | first_address | (second_address as u16));
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -269,31 +284,6 @@ mod tests {
     }
 
     #[test]
-    fn add() {
-        let translator = Translator::new();
-
-        let result = translator.translate_line(String::from("ADD R1 M6")).unwrap();
-        assert_eq!(result.unwrap(), 0b0010_000001_010110u16);
-
-        let result = translator.translate_line(String::from("ADD   RP2  RPM3")).unwrap();
-        assert_eq!(result.unwrap(), 0b0010_100010_110011u16);
-
-        // Testing errors.
-
-        let result = translator.translate_line(String::from("ADD  M2"));
-        assert_eq!(result.is_err(), true);
-
-        let result = translator.translate_line(String::from("ADD M20 M2"));
-        assert_eq!(result.is_err(), true);
-
-        let result = translator.translate_line(String::from("ADD 120 14"));
-        assert_eq!(result.is_err(), true);
-
-        let result = translator.translate_line(String::from("ADD"));
-        assert_eq!(result.is_err(), true);
-    }
-
-    #[test]
     fn skip_if_zero() {
         let translator = Translator::new();
 
@@ -324,6 +314,56 @@ mod tests {
         assert_eq!(result.is_err(), true);
 
         let result = translator.translate_line(String::from("SKIP_IF_ZERO 0"));
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn add() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("ADD R1 M6")).unwrap();
+        assert_eq!(result.unwrap(), 0b0010_000001_010110u16);
+
+        let result = translator.translate_line(String::from("ADD   RP2  RPM3")).unwrap();
+        assert_eq!(result.unwrap(), 0b0010_100010_110011u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("ADD  M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("ADD M20 M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("ADD 120 14"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("ADD"));
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn subtract() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("SUBTRACT R3 M5")).unwrap();
+        assert_eq!(result.unwrap(), 0b0011_000011_010101u16);
+
+        let result = translator.translate_line(String::from("subtract   RP7  RPM3")).unwrap();
+        assert_eq!(result.unwrap(), 0b0011_100111_110011u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("SUBTRACT  M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SUBTRACT M20 M2"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SUBTRACT 120 14"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SUBTRACT"));
         assert_eq!(result.is_err(), true);
     }
 
