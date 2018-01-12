@@ -12,6 +12,7 @@ impl Translator {
     pub fn new() -> Translator {
         let mut map: HashMap<&'static str, fn(Vec<String>) -> Result<u16, String>> = HashMap::new();
 
+        map.insert("data", data);
         map.insert("nop", nop);
         map.insert("copy", copy);
         map.insert("jump", jump);
@@ -21,6 +22,7 @@ impl Translator {
         map.insert("skip_if_equal", skip_if_equal);
         map.insert("skip_if_greater", skip_if_greater);
         map.insert("set", set);
+
 
         Translator {
             operations_map: map,
@@ -81,6 +83,7 @@ impl Translator {
 
 }
 
+/// Translates an string to its equivalent 6 bit address.
 fn translate_address(address_str: &String) -> Result<u8, String> {
     let address_type: u8;
     let address_value_str: String;
@@ -124,6 +127,25 @@ fn translate_address(address_str: &String) -> Result<u8, String> {
 
     // Appending address type and its value.
     return Ok(address_type | address_value);
+}
+
+
+/// DATA means no operation, just a data that will be stored on that block
+/// of memory.
+fn data(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 2 {
+        return Err(format!("DATA requires exactly one argument, {} found.", args.len() - 1));
+    }
+
+    let data = match args[1].parse::<u16>() {
+        Ok(v) => v,
+        Err(error) => return Err(format!(
+            "Argument of DATA must be a positive number less than 65536. Argument: [{}] Error: {}",
+            args[1], error)),
+    };
+
+    return Ok(data);
 }
 
 fn nop(args: Vec<String>) -> Result<u16, String> {
@@ -271,6 +293,27 @@ mod tests {
 
         let result = translator.translate_line(String::from("    ; comment")).unwrap();
         assert_eq!(result.is_none(), true);
+    }
+
+    #[test]
+    fn data() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("DATA     3000")).unwrap();
+        assert_eq!(result.unwrap(), 3000);
+
+        let result = translator.translate_line(String::from(" Data  65535  ")).unwrap();
+        assert_eq!(result.unwrap(), 65535);
+
+        // Errors
+        let result = translator.translate_line(String::from(" DATA  "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from(" DATA  120  200"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from(" DATA  0xFF "));
+        assert_eq!(result.is_err(), true);
     }
 
     #[test]
