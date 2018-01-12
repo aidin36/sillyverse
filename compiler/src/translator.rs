@@ -285,6 +285,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bad_line() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("BAD_COMMAND  12"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("  3000 DATA "));
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
     fn comment() {
         let translator = Translator::new();
 
