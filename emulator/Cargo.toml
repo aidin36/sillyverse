@@ -2,7 +2,7 @@
 name = "emulator"
 version = "0.1.0"
 authors = ["Aidin Gharibnavaz <aidin@aidinhut.com>"]
-description = "Virtual Machine Emulator libary for A Binary Life project"
+description = "Virtual Machine Emulator libary for Sillyverse project."
 license = "GPLv3"
 # Preventing accedental publishing on crates.io
 publish = false
