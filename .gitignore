@@ -3,6 +3,7 @@
 
 # Build directories
 **/target/
+**/build/
 
 # IDE files
 .idea
