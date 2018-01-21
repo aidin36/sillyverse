@@ -19,6 +19,7 @@
 
 mod operations;
 mod operation_code;
+use CPUState;
 
 
 pub struct Hardware {
@@ -32,6 +33,8 @@ pub struct Hardware {
 
     overflow_flag: bool,
     error_flag: bool,
+
+    sys_callback: Option<fn(&mut CPUState) -> ()>,
 
     operations: operations::Operations,
 }
@@ -49,6 +52,7 @@ impl Hardware {
             registers: [0; 8],
             overflow_flag: false,
             error_flag: false,
+            sys_callback: None,
             operations: operations::Operations::new(),
         }
     }
@@ -138,6 +142,10 @@ impl Hardware {
         }
 
         return Ok(new_size as u16);
+    }
+
+    pub fn register_sys_callback(&mut self, callback: fn(&mut CPUState) -> ()) {
+        self.sys_callback = Some(callback);
     }
 }
 
@@ -694,5 +702,50 @@ mod tests {
         assert_eq!(hardware.registers[3], 120);
         assert_eq!(hardware.registers[1], 140);
         assert_eq!(hardware.registers[0], 1000);
+    }
+
+    #[test]
+    fn instruction_syscall() {
+        let mut hardware = Hardware::new(3);
+
+        hardware.register_sys_callback(mock_syscall);
+
+        let code = vec![0b0000000000_000001u16,
+                        0b0000000000_000001u16];
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[0] = 17;
+        hardware.registers[1] = 128;
+        hardware.registers[7] = 5;
+
+        hardware.clock().unwrap();
+
+        assert_eq!(hardware.registers[0], 0);
+        assert_eq!(hardware.registers[3], 12);
+        assert_eq!(hardware.registers[7], 2);
+
+        hardware.registers[0] = 1;
+        let clock_result = hardware.clock();
+
+        assert_eq!(clock_result.is_err(), true);
+        assert_eq!(hardware.error_flag, true);
+    }
+
+    fn mock_syscall(cpu_state: &mut CPUState) {
+
+        if cpu_state.get_register(0) == 1 {
+            assert_eq!(cpu_state.get_error_flag(), false);
+            cpu_state.set_error_flag(true);
+            return;
+        }
+
+        assert_eq!(cpu_state.get_error_flag(), false);
+        assert_eq!(cpu_state.get_register(0), 17);
+        assert_eq!(cpu_state.get_register(1), 128);
+        assert_eq!(cpu_state.get_register(7), 5);
+
+        cpu_state.set_register(0, 0);
+        cpu_state.set_register(3, 12);
+        cpu_state.set_register(7, 2);
     }
 }

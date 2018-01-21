@@ -17,6 +17,11 @@
 /// This module provides an interface to the library.
 
 mod hardware;
+mod cpu_state;
+
+// Importing public API types.
+pub use cpu_state::CPUState;
+
 
 pub struct Emulator {
     hardware: hardware::Hardware,
@@ -49,8 +54,9 @@ impl Emulator {
         return self.hardware.clock();
     }
 
-    pub fn register_sys_callback(&mut self) -> Result<(), String> {
-        return Err(String::from("Not implemented."));
+    /// Registers a callback function that is responsible for handling sys calls.
+    pub fn register_sys_callback(&mut self, callback: fn(&mut CPUState) -> ()) {
+        self.hardware.register_sys_callback(callback);
     }
 
     /// Increases the memory by the specified additional bytes.

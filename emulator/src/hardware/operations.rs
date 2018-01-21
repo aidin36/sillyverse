@@ -19,6 +19,7 @@
 use std::collections::HashMap;
 use hardware::Hardware;
 use hardware::operation_code::OperationCode;
+use CPUState;
 
 
 pub struct Operations {
@@ -32,6 +33,7 @@ impl Operations {
 
         // No operand operations
         map.insert(OperationCode::new(0b0000000000_000000u16), nop);
+        map.insert(OperationCode::new(0b0000000000_000001u16), syscall);
 
         // Single operand operations
         map.insert(OperationCode::new(0b0000_000001_000000u16), jump);
@@ -213,6 +215,32 @@ fn extract_two_operand_value(hardware: &Hardware, instruction: u16, supports_reg
 /// It just increases program counter (skips this instruction).
 fn nop(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
     hardware.program_counter += 1;
+    return Ok(());
+}
+
+/// Do a sys call. Each sys call has its own conventions. See documentation.
+fn syscall(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
+
+    if hardware.sys_callback.is_none() {
+        return Err(String::from("This machine does not support sys calls."));
+    }
+
+    let mut cpu_state = CPUState::new(&hardware.registers);
+
+    // Calling the sys call.
+    (hardware.sys_callback.unwrap())(&mut cpu_state);
+
+    // Setting changed registers in the hardware.
+    for i in 0..hardware.registers.len() {
+        hardware.registers[i] = cpu_state.get_register(i);
+    }
+
+    // Checking for errors.
+    if cpu_state.get_error_flag() {
+        hardware.error_flag = true;
+        return Err(String::from("Something went wrong when sys call is called."));
+    }
+
     return Ok(());
 }
 
