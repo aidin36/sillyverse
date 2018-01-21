@@ -137,7 +137,7 @@ impl Hardware {
 
         // Filling new memory with zeros.
         // TODO: There should be a faster way.
-        for i in current_size..new_size {
+        for _i in current_size..new_size {
             self.memory.push(0u16);
         }
 
@@ -666,7 +666,7 @@ mod tests {
         let code = vec![0b0110_010_001001101u16,
                         0b0110_111_111111111u16,
                         0b0110_010_000000000u16];
-        hardware.load(&code, 0);
+        hardware.load(&code, 0).unwrap();
 
 
         hardware.registers[4] = 100;
