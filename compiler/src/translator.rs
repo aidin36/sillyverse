@@ -30,6 +30,7 @@ impl Translator {
 
         map.insert("data", data);
         map.insert("nop", nop);
+        map.insert("syscall", syscall);
         map.insert("copy", copy);
         map.insert("jump", jump);
         map.insert("skip_if_zero", skip_if_zero);
@@ -171,6 +172,15 @@ fn nop(args: Vec<String>) -> Result<u16, String> {
     }
 
     return Ok(0u16);
+}
+
+fn syscall(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 1 {
+        return Err(String::from("SYSCALL doesn't accept arguments."));
+    }
+
+    return Ok(0b0000000000_000001u16);
 }
 
 fn copy(args: Vec<String>) -> Result<u16, String> {
@@ -357,6 +367,21 @@ mod tests {
         assert_eq!(result.unwrap(), 0u16);
 
         let result = translator.translate_line(String::from("NOP  R1"));
+        assert_eq!(result.is_err(), true);
+    }
+
+
+    #[test]
+    fn syscall() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("  SYSCALL  ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000000000_000001u16);
+
+        let result = translator.translate_line(String::from("SysCall ; A comment NOP ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000000000_000001u16);
+
+        let result = translator.translate_line(String::from("SYSCALL  R1"));
         assert_eq!(result.is_err(), true);
     }
 
