@@ -221,14 +221,10 @@ fn nop(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
 /// Do a sys call. Each sys call has its own conventions. See documentation.
 fn syscall(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
 
-    if hardware.sys_callback.is_none() {
-        return Err(String::from("This machine does not support sys calls."));
-    }
-
     let mut cpu_state = CPUState::new(&hardware.registers);
 
     // Calling the sys call.
-    (hardware.sys_callback.unwrap())(&mut cpu_state);
+    hardware.call_syscall(&mut cpu_state)?;
 
     // Setting changed registers in the hardware.
     for i in 0..hardware.registers.len() {

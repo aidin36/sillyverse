@@ -19,7 +19,11 @@
 
 mod operations;
 mod operation_code;
+
+use std::rc::Weak;
+use std::sync::Mutex;
 use CPUState;
+use SysCallback;
 
 
 pub struct Hardware {
@@ -34,7 +38,7 @@ pub struct Hardware {
     overflow_flag: bool,
     error_flag: bool,
 
-    sys_callback: Option<fn(&mut CPUState) -> ()>,
+    sys_callback: Option<Weak<Mutex<SysCallback>>>,
 
     operations: operations::Operations,
 }
@@ -144,8 +148,30 @@ impl Hardware {
         return Ok(new_size as u16);
     }
 
-    pub fn register_sys_callback(&mut self, callback: fn(&mut CPUState) -> ()) {
+    pub fn register_sys_callback(&mut self, callback: Weak<Mutex<SysCallback>>) {
         self.sys_callback = Some(callback);
+    }
+
+    pub fn call_syscall(&mut self, cpu_state: &mut CPUState) -> Result<(), &'static str> {
+
+        match self.sys_callback {
+            None => return Err("This machine does not support sys calls."),
+            Some(ref weak_callback) => {
+                // Upgrading Weak to Rc to access its value.
+                match weak_callback.upgrade() {
+                    // None means this reference is dropped.
+                    None => return Err("This machine no longer support sys calls: Callback reference dropped."),
+                    // Getting mutable reference and calling the callback.
+                    Some(ref mut callback_mutex) => {
+                        let mut callback = callback_mutex.lock().
+                            expect("Failed to lock the syscall callback. Please report this bug!");
+                        callback.syscall(cpu_state);
+                    },
+                };
+            },
+        }
+
+        return Ok(());
     }
 }
 
@@ -155,6 +181,7 @@ mod tests {
 
     use super::*;
     use std::u16;
+    use std::rc::Rc;
 
     #[test]
     fn load() {
@@ -704,11 +731,37 @@ mod tests {
         assert_eq!(hardware.registers[0], 1000);
     }
 
+    struct MockSyscall {
+    }
+
+    impl SysCallback for MockSyscall {
+        fn syscall(&mut self, cpu_state: &mut CPUState) {
+
+            if cpu_state.get_register(0) == 1 {
+                assert_eq!(cpu_state.get_error_flag(), false);
+                cpu_state.set_error_flag(true);
+                return;
+            }
+
+            assert_eq!(cpu_state.get_error_flag(), false);
+            assert_eq!(cpu_state.get_register(0), 17);
+            assert_eq!(cpu_state.get_register(1), 128);
+            assert_eq!(cpu_state.get_register(7), 5);
+
+            cpu_state.set_register(0, 0);
+            cpu_state.set_register(3, 12);
+            cpu_state.set_register(7, 2);
+        }
+    }
+
     #[test]
     fn instruction_syscall() {
         let mut hardware = Hardware::new(3);
 
-        hardware.register_sys_callback(mock_syscall);
+        let syscall_rc = Rc::new(Mutex::new(MockSyscall {}));
+        let syscall_weak = Rc::downgrade(&Rc::clone(&syscall_rc));
+
+        hardware.register_sys_callback(syscall_weak);
 
         let code = vec![0b0000000000_000001u16,
                         0b0000000000_000001u16];
@@ -731,21 +784,4 @@ mod tests {
         assert_eq!(hardware.error_flag, true);
     }
 
-    fn mock_syscall(cpu_state: &mut CPUState) {
-
-        if cpu_state.get_register(0) == 1 {
-            assert_eq!(cpu_state.get_error_flag(), false);
-            cpu_state.set_error_flag(true);
-            return;
-        }
-
-        assert_eq!(cpu_state.get_error_flag(), false);
-        assert_eq!(cpu_state.get_register(0), 17);
-        assert_eq!(cpu_state.get_register(1), 128);
-        assert_eq!(cpu_state.get_register(7), 5);
-
-        cpu_state.set_register(0, 0);
-        cpu_state.set_register(3, 12);
-        cpu_state.set_register(7, 2);
-    }
 }

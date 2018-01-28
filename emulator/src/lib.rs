@@ -18,9 +18,14 @@
 
 mod hardware;
 mod cpu_state;
+mod sys_callback;
+
+use std::rc::Weak;
+use std::sync::Mutex;
 
 // Importing public API types.
 pub use cpu_state::CPUState;
+pub use sys_callback::SysCallback;
 
 
 pub struct Emulator {
@@ -55,7 +60,7 @@ impl Emulator {
     }
 
     /// Registers a callback function that is responsible for handling sys calls.
-    pub fn register_sys_callback(&mut self, callback: fn(&mut CPUState) -> ()) {
+    pub fn register_sys_callback(&mut self, callback: Weak<Mutex<SysCallback>>) {
         self.hardware.register_sys_callback(callback);
     }
 
