@@ -183,6 +183,14 @@ mod tests {
     use std::u16;
     use std::rc::Rc;
 
+    /// This method can be used by tests inside other modules to
+    /// assert memory of the hardware.
+    impl Hardware {
+        pub fn compare_memory(&self, expected_memory: &Vec<u16>) {
+            assert_eq!(&self.memory, expected_memory);
+        }
+    }
+
     #[test]
     fn load() {
         let mut hardware = Hardware::new(12);
