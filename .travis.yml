@@ -1,0 +1,23 @@
+language: rust
+sudo: required
+os: linux
+cache: cargo
+
+addons:
+  apt:
+    packages:
+      - libssl-dev
+
+before_install:
+  - cargo install cargo-tarpaulin
+
+script:
+  - echo "Building emulator"
+  - cd emulator
+  - cargo build
+  - cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
+  - echo "Building compiler"
+  - cd ../compiler/
+  - cargo build
+  - cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
+
