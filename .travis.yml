@@ -9,7 +9,10 @@ addons:
       - libssl-dev
 
 before_install:
-  - cargo install cargo-tarpaulin
+  # Because we cached Cargo packages, installing "tarpaulin" may fail with
+  # "already exists" error. So we added "||true" to prevent failure of the
+  # CI process.
+  - cargo install cargo-tarpaulin ||true
 
 script:
   - echo "Building emulator"
