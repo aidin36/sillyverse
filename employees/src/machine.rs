@@ -23,14 +23,16 @@ use syscalls;
 
 
 pub struct Machine {
+    name: String,
     emulator: Emulator,
     credit: u16,
 }
 
 impl Machine {
 
-    pub fn new(memory_size: u16, initial_credit: u16) -> Rc<Mutex<Machine>> {
+    pub fn new(name: &String, memory_size: u16, initial_credit: u16) -> Rc<Mutex<Machine>> {
         let instance = Machine {
+            name: name.clone(),
             emulator: Emulator::new(memory_size),
             credit: initial_credit,
         };
@@ -43,6 +45,39 @@ impl Machine {
 
         return rc_instance;
     }
+
+    /// Gets name of the machine.
+    pub fn get_name(&self) -> String {
+        return self.name.clone();
+    }
+
+    /// Loads a bot into the machine.
+    /// It loads the bot into the zero index of the memory.
+    ///
+    /// @file_path: Path to the file that contains bot's binary code.
+    pub fn load_bot(&mut self, file_path: &String) -> Result<(), &'static str> {
+        return self.emulator.load_from_file(file_path, 0);
+    }
+
+    /// Clocks the machine CPU.
+    /// If any error returns, it means something went really wrong and
+    /// this machine is no longer in a valid state.
+    pub fn clock(&mut self) -> Result<(), String> {
+        let result = self.emulator.clock();
+
+        if result.is_err() {
+            return Err(format!("Error in machine [{}]: {}", self.name, result.unwrap_err()));
+        }
+
+        self.credit -= 1;
+
+        if self.credit == 0 {
+            return Err(format!("This machine has no more credit: [{}]", self.name));
+        }
+
+        return Ok(());
+    }
+
 }
 
 impl SysCallback for Machine {

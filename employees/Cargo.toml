@@ -9,3 +9,5 @@ publish = false
 
 [dependencies]
 emulator = { path = "../emulator/" }
+log = "0.4"
+simplelog = "0.4"
