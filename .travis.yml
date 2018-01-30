@@ -14,6 +14,7 @@ before_install:
   # CI process.
   - cargo install cargo-tarpaulin ||true
 
+# TODO: For now, we only report coverage of Emulator. We should accumulate all coverages.
 script:
   - echo "Building emulator"
   - cd emulator
@@ -22,5 +23,8 @@ script:
   - echo "Building compiler"
   - cd ../compiler/
   - cargo build
-  - cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
-
+  - cargo test
+  - echo "Building employees"
+  - cd ../employees/
+  - cargo build
+  - cargo test

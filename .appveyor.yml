@@ -33,3 +33,5 @@ test_script:
   - cargo test --verbose
   - cd ../compiler/
   - cargo test --verbose
+  - cd ../employees/
+  - cargo test --verbose
