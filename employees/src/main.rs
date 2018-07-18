@@ -141,16 +141,16 @@ mod tests {
         first_bot_file.write(&[0b01100010u8, 0b01111000u8, // SET R1 120
                                0b01100100u8, 0b10001100u8, // SET R2 140
                                0b00100000u8, 0b01000010u8, // ADD R1 R2
-                              ]);
-        first_bot_file.flush();
+                              ]).unwrap();
+        first_bot_file.flush().unwrap();
 
         let mut second_bot_file_path = temp_dir();
         second_bot_file_path.push("test_second_bot_fju8734");
         let mut second_bot_file = File::create(&second_bot_file_path).unwrap();
         second_bot_file.write(&[0b00000000u8, 0b00000000u8, // NOP
                                      0b11110011u8, 0b11111111u8, // Bad instruction
-                                     ]);
-        second_bot_file.flush();
+                                     ]).unwrap();
+        second_bot_file.flush().unwrap();
 
         let first_bot_file_path = String::from(first_bot_file_path.to_str().unwrap());
         let second_bot_file_path = String::from(second_bot_file_path.to_str().unwrap());
@@ -163,7 +163,7 @@ mod tests {
 
         simplelog::WriteLogger::init(simplelog::LogLevelFilter::Info,
                                      simplelog::Config::default(),
-                                     mock_logger);
+                                     mock_logger).unwrap();
 
         start(&vec![first_bot_file_path.clone(), second_bot_file_path.clone()],
               20, 3);
