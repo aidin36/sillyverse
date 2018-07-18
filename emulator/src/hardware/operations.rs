@@ -299,7 +299,7 @@ fn skip_if_zero(hardware: &mut Hardware, instruction: u16) -> Result<(), String>
 
 /// Copy value of an address to another.
 fn copy(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
-    let (source_address, destination_address) = extract_two_operand_address((instruction));
+    let (source_address, destination_address) = extract_two_operand_address(instruction);
 
     let source_true_address = get_true_address(hardware, source_address)?;
     let source_value = match source_true_address {
@@ -328,7 +328,7 @@ fn copy(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
 
 /// Adds two values.
 fn add(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
-    let (first_address, second_address) = extract_two_operand_address((instruction));
+    let (first_address, second_address) = extract_two_operand_address(instruction);
 
     let true_first_address = get_true_address(hardware, first_address)?;
     let first_value = match true_first_address {
@@ -366,7 +366,7 @@ fn add(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
 
 /// Subtracts two values.
 fn subtract(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
-    let (first_address, second_address) = extract_two_operand_address((instruction));
+    let (first_address, second_address) = extract_two_operand_address(instruction);
 
     let true_first_address = get_true_address(hardware, first_address)?;
     let first_value = match true_first_address {

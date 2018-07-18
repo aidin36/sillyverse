@@ -24,7 +24,6 @@ use std::rc::Weak;
 use std::sync::Mutex;
 use std::fs::File;
 use std::io::BufReader;
-use std::io::BufRead;
 use std::io::Read;
 
 
@@ -135,8 +134,8 @@ mod tests {
         let code = vec![0b00000000u8, 0b00000000u8, 0b00010000u8, 0b01000010u8,
                         0b00100000u8, 0b10110011u8, 0b01101001u8, 0b11111111u8,
                         0b00000000u8, 0b00000000u8, 0b00001011u8, 0b10111000u8];
-        f.write(&code);
-        f.flush();
+        f.write(&code).unwrap();
+        f.flush().unwrap();
 
         let mut emulator = Emulator::new(8);
         emulator.load_from_file(&String::from(code_file.to_str().unwrap()), 2).unwrap();
