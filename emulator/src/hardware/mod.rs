@@ -22,6 +22,7 @@ mod operation_code;
 
 use std::rc::Weak;
 use std::sync::Mutex;
+use std::vec::Vec;
 use CPUState;
 use SysCallback;
 
@@ -30,12 +31,13 @@ pub struct Hardware {
     memory: Vec<u16>,
 
     program_counter: u16,
-    stack_pointer: u8,
+    call_stack: Vec<u16>,
 
     // There are 8 registers.
     registers: [u16; 8],
 
     overflow_flag: bool,
+    underflow_flag: bool,
     error_flag: bool,
 
     sys_callback: Option<Weak<Mutex<SysCallback>>>,
@@ -52,13 +54,20 @@ impl Hardware {
         Hardware {
             memory: vec![0; memory_size as usize],
             program_counter: 0,
-            stack_pointer: 0,
+            call_stack: Vec::with_capacity(10),
             registers: [0; 8],
             overflow_flag: false,
+            underflow_flag: false,
             error_flag: false,
             sys_callback: None,
             operations: operations::Operations::new(),
         }
+    }
+
+    /// Static method.
+    /// Returns the maximum size of the call stack.
+    pub fn get_call_stack_size() -> usize {
+        return 15;
     }
 
     /// Loads the specified data into memory.
@@ -337,6 +346,55 @@ mod tests {
 
         hardware.clock().unwrap();
         assert_eq!(hardware.program_counter, 1);
+    }
+
+    #[test]
+    fn instruction_subroutine_return() {
+        // Tests calling a subrouting and returning from it.
+
+        let mut hardware = Hardware::new(11);
+
+        let code = vec![0b0000_000011_000010u16, // register 2 is the address of jump
+                        0b0110_111_111111111u16, // Set value to register 7
+                        0b0000000000000000u16,
+                        0b0000000000000000u16,
+                        0b0110_110_100011111u16, // Set value to register 6
+                        0b0000000000_000010u16, // Return
+                        0b0000000000000000u16];
+
+        hardware.load(&code, 0).unwrap();
+
+        hardware.registers[2] = 4; // Jump address
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 4);
+        assert_eq!(hardware.registers[2], 4u16);
+        assert_eq!(hardware.registers[7], 0u16);
+        assert_eq!(hardware.registers[6], 0u16);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 5);
+        assert_eq!(hardware.registers[2], 4u16);
+        assert_eq!(hardware.registers[7], 0u16);
+        assert_eq!(hardware.registers[6], 0b0000000_100011111u16);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 1);
+        assert_eq!(hardware.registers[2], 4u16);
+        assert_eq!(hardware.registers[7], 0u16);
+        assert_eq!(hardware.registers[6], 0b0000000_100011111u16);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 2);
+        assert_eq!(hardware.registers[2], 4u16);
+        assert_eq!(hardware.registers[7], 0b0000000_111111111u16);
+        assert_eq!(hardware.registers[6], 0b0000000_100011111u16);
+
+        hardware.clock().unwrap();
+        assert_eq!(hardware.program_counter, 3);
+        assert_eq!(hardware.registers[2], 4u16);
+        assert_eq!(hardware.registers[7], 0b0000000_111111111u16);
+        assert_eq!(hardware.registers[6], 0b0000000_100011111u16);
     }
 
     #[test]

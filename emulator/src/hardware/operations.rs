@@ -34,10 +34,12 @@ impl Operations {
         // No operand operations
         map.insert(OperationCode::new(0b0000000000_000000u16), nop);
         map.insert(OperationCode::new(0b0000000000_000001u16), syscall);
+        map.insert(OperationCode::new(0b0000000000_000010u16), return_subroutine);
 
         // Single operand operations
         map.insert(OperationCode::new(0b0000_000001_000000u16), jump);
         map.insert(OperationCode::new(0b0000_000010_000000u16), skip_if_zero);
+        map.insert(OperationCode::new(0b0000_000011_000000u16), subroutine);
 
         // Double operand operations
         map.insert(OperationCode::new(0b0001_000000000000u16), copy);
@@ -240,9 +242,39 @@ fn syscall(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
     return Ok(());
 }
 
+fn return_subroutine(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
+
+   match hardware.call_stack.pop() {
+        Some(pc) =>  hardware.program_counter = pc,
+        None => {
+            hardware.underflow_flag = true;
+            return Err(String::from("Call stack underflow"));
+        }
+    };
+
+    return Ok(());
+}
+
 /// Jumps to the address inside the instruction.
 fn jump(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
 
+    hardware.program_counter =
+        extract_one_operand_value(hardware, instruction, true)?;
+
+    return Ok(());
+}
+
+fn subroutine(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
+
+    if hardware.call_stack.len() == Hardware::get_call_stack_size() {
+        hardware.overflow_flag = true;
+        return Err(String::from("Call stack overflow."));
+    }
+
+    // Storing return address.
+    hardware.call_stack.push(hardware.program_counter + 1);
+
+    // Jumping.
     hardware.program_counter =
         extract_one_operand_value(hardware, instruction, true)?;
 
