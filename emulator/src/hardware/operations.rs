@@ -233,6 +233,8 @@ fn syscall(hardware: &mut Hardware, _instruction: u16) -> Result<(), String> {
         hardware.registers[i] = cpu_state.get_register(i);
     }
 
+    hardware.program_counter += 1;
+
     // Checking for errors.
     if cpu_state.get_error_flag() {
         hardware.error_flag = true;

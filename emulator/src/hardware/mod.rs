@@ -839,6 +839,7 @@ mod tests {
 
         hardware.clock().unwrap();
 
+        assert_eq!(hardware.program_counter, 1);
         assert_eq!(hardware.registers[0], 0);
         assert_eq!(hardware.registers[3], 12);
         assert_eq!(hardware.registers[7], 2);
@@ -846,6 +847,7 @@ mod tests {
         hardware.registers[0] = 1;
         let clock_result = hardware.clock();
 
+        assert_eq!(hardware.program_counter, 2);
         assert_eq!(clock_result.is_err(), true);
         assert_eq!(hardware.error_flag, true);
     }
