@@ -12,7 +12,7 @@ before_install:
   # Because we cached Cargo packages, installing "tarpaulin" may fail with
   # "already exists" error. So we added "||true" to prevent failure of the
   # CI process.
-  - cargo install cargo-tarpaulin ||true
+  - RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin ||true
 
 # TODO: For now, we only report coverage of Emulator. We should accumulate all coverages.
 script:
