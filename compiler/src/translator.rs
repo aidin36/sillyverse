@@ -30,6 +30,8 @@ impl Translator {
 
         map.insert("data", data);
         map.insert("nop", nop);
+        map.insert("subroutine", subroutine);
+        map.insert("return", return_subroutine);
         map.insert("syscall", syscall);
         map.insert("copy", copy);
         map.insert("jump", jump);
@@ -172,6 +174,25 @@ fn nop(args: Vec<String>) -> Result<u16, String> {
     }
 
     return Ok(0u16);
+}
+
+fn subroutine(args: Vec<String>) -> Result<u16, String> {
+    if args.len() != 2 {
+        return Err(format!("SUBROUTINE requires exactly one arguments, {} given.", args.len() -1));
+    }
+
+    let address = translate_address(&args[1])?;
+
+    return Ok(0b0000_000011_000000u16 | (address as u16));
+}
+
+fn return_subroutine(args: Vec<String>) -> Result<u16, String> {
+
+    if args.len() != 1 {
+        return Err(String::from("RETURN doesn't accept arguments."));
+    }
+
+    return Ok(0b0000000000_000010u16);
 }
 
 fn syscall(args: Vec<String>) -> Result<u16, String> {
@@ -370,6 +391,54 @@ mod tests {
         assert_eq!(result.is_err(), true);
     }
 
+    #[test]
+    fn subroutine() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("SubRoutine R2 ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000011_000010u16);
+
+        let result = translator.translate_line(String::from("SUBROUTIne  m5 ;comment ")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000011_010101u16);
+
+        let result = translator.translate_line(String::from("subroutine Rp5")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000011_100101u16);
+
+        let result = translator.translate_line(String::from("SUBroutine RPm5")).unwrap();
+        assert_eq!(result.unwrap(), 0b0000_000011_110101u16);
+
+        // Testing errors.
+
+        let result = translator.translate_line(String::from("SUBROUTINE "));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("Subroutine ; comment"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SUBROUTINE R1 R4"));
+        assert_eq!(result.is_err(), true);
+
+        let result = translator.translate_line(String::from("SUBROUTINE 14"));
+        assert_eq!(result.is_err(), true);
+
+    }
+
+    #[test]
+    fn return_subroutine() {
+        let translator = Translator::new();
+
+        let result = translator.translate_line(String::from("RETURN")).unwrap();
+        assert_eq!(result.unwrap(), 2u16);
+
+        let result = translator.translate_line(String::from("ReTuRn  ")).unwrap();
+        assert_eq!(result.unwrap(), 2u16);
+
+        let result = translator.translate_line(String::from("return ; A ;Comment")).unwrap();
+        assert_eq!(result.unwrap(), 2u16);
+
+        let result = translator.translate_line(String::from("RETURN  R1"));
+        assert_eq!(result.is_err(), true);
+    }
 
     #[test]
     fn syscall() {
