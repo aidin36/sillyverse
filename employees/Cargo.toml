@@ -11,3 +11,4 @@ publish = false
 emulator = { path = "../emulator/" }
 log = "0.4"
 simplelog = "0.4"
+rand = "0.5"

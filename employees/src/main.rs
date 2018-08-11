@@ -18,10 +18,12 @@
 extern crate log;
 extern crate simplelog;
 
+extern crate rand;
 extern crate emulator;
 
 mod machine;
 mod syscalls;
+mod tasks;
 
 use std::env;
 use std::sync::Mutex;
@@ -116,7 +118,6 @@ mod tests {
     use std::io;
     use std::env::temp_dir;
     use std::sync::{Mutex, Arc};
-    use std::ops::Deref;
 
     struct MockLogger {
         logs_buffer: Arc<Mutex<Vec<u8>>>,
