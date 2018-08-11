@@ -373,7 +373,7 @@ fn subtract(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
         Address::Register(register_number) => hardware.registers[register_number as usize],
         Address::Memory(memory_address) => hardware.memory[memory_address as usize],
         Address::RegisterPlusPC(_) =>
-            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+            return Err(format!("Invalid source address type for SUBTRACT. Instruction: {:b}",
                                instruction)),
     };
 
@@ -382,7 +382,7 @@ fn subtract(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
         Address::Register(register_number) => hardware.registers[register_number as usize],
         Address::Memory(memory_address) => hardware.memory[memory_address as usize],
         Address::RegisterPlusPC(_) =>
-            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+            return Err(format!("Invalid source address type for SUBTRACT. Instruction: {:b}",
                                instruction)),
     };
 
@@ -393,7 +393,7 @@ fn subtract(hardware: &mut Hardware, instruction: u16) -> Result<(), String> {
         Address::Register(register_number) => hardware.registers[register_number as usize] = result,
         Address::Memory(memory_address) => hardware.memory[memory_address as usize] = result,
         Address::RegisterPlusPC(_) =>
-            return Err(format!("Invalid source address type for ADD. Instruction: {:b}",
+            return Err(format!("Invalid source address type for SUBTRACT. Instruction: {:b}",
                                instruction)),
     }
 
