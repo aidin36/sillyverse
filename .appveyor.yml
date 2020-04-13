@@ -1,6 +1,7 @@
-os: Visual Studio 2015
+os: Visual Studio 2019
 
 version: 1.0.0.{build}
+clone_depth: 1
 
 environment:
   matrix:
@@ -26,7 +27,7 @@ install:
 
 # 'cargo test' takes care of building for us, so disable Appveyor's build stage. This prevents
 # the "directory does not contain a project or solution file" error.
-build: false
+build: off
 
 test_script:
   - cd emulator/
