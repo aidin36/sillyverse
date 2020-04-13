@@ -1,5 +1,5 @@
 // This file is part of Sillyverse.
-// Copyright (C) 2017, 2018, Aidin Gharibnavaz <aidin@aidinhut.com>
+// Copyright (C) 2017-2020, Aidin Gharibnavaz <aidin@aidinhut.com>
 //
 // Sillyverse is free software: you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as
