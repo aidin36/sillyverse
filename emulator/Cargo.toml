@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Aidin Gharibnavaz <aidin@aidinhut.com>"]
 description = "Virtual Machine Emulator libary for Sillyverse project."
 license = "GPLv3"
-# Preventing accedental publishing on crates.io
+# Preventing accedental publish to crates.io
 publish = false
 
 [dependencies]

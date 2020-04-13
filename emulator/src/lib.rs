@@ -101,7 +101,7 @@ impl Emulator {
     }
 
     /// Registers a callback function that is responsible for handling sys calls.
-    pub fn register_sys_callback(&mut self, callback: Weak<Mutex<SysCallback>>) {
+    pub fn register_sys_callback(&mut self, callback: Weak<Mutex<dyn SysCallback>>) {
         self.hardware.register_sys_callback(callback);
     }
 

@@ -100,7 +100,7 @@ fn main() {
 
     // Configuring logger.
     // TODO: Read logging configs from a file.
-    simplelog::TermLogger::init(simplelog::LogLevelFilter::Info, simplelog::Config::default())
+    simplelog::TermLogger::init(simplelog::LevelFilter::Info, simplelog::Config::default(), simplelog::TerminalMode::Mixed)
         .unwrap();
 
     //TODO: Read initial values from config file.
@@ -162,7 +162,7 @@ mod tests {
             logs_buffer: Arc::clone(&logs_buffer),
         };
 
-        simplelog::WriteLogger::init(simplelog::LogLevelFilter::Info,
+        simplelog::WriteLogger::init(simplelog::LevelFilter::Info,
                                      simplelog::Config::default(),
                                      mock_logger).unwrap();
 

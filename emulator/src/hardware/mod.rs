@@ -40,7 +40,7 @@ pub struct Hardware {
     underflow_flag: bool,
     error_flag: bool,
 
-    sys_callback: Option<Weak<Mutex<SysCallback>>>,
+    sys_callback: Option<Weak<Mutex<dyn SysCallback>>>,
 
     operations: operations::Operations,
 }
@@ -157,7 +157,7 @@ impl Hardware {
         return Ok(new_size as u16);
     }
 
-    pub fn register_sys_callback(&mut self, callback: Weak<Mutex<SysCallback>>) {
+    pub fn register_sys_callback(&mut self, callback: Weak<Mutex<dyn SysCallback>>) {
         self.sys_callback = Some(callback);
     }
 
